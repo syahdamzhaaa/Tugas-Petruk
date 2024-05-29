@@ -21,105 +21,88 @@ int Precedence(char op) {
     return 0;
 }
 
-vector<string> tokenize(const string &infix) {
-    vector<string> token;
-    stringstream pengumpulString;
-    bool sebelumnyaOperator = true;
-    bool karakterPertama = true;
+string infixToPostfix(const string& infix) {
+    stringstream postfix;
+    stack<char> operators;
+    bool expectUnary = true;
 
-    for (size_t i = 0; i < infix.size(); ++i) {
-        char karakter = infix[i];
+    int n = infix.size();
+    for (int i = 0; i < n; ++i) {
+        if (isspace(infix[i])) 
+            continue;
 
-        if (Digit(karakter)) {
-            pengumpulString << karakter;
-            sebelumnyaOperator = false;
-            karakterPertama = false;
-        } else if (Operator(karakter)) {
-            if (pengumpulString.str().length() > 0) {
-                token.push_back(pengumpulString.str());
-                pengumpulString.str("");
+        if (isdigit(infix[i])) {
+            postfix << infix[i];
+            while (i + 1 < n && (isdigit(infix[i + 1]) || infix[i + 1] == '.')) {
+                postfix << infix[++i];
             }
-
-            if (karakter == '-' and (sebelumnyaOperator or (i > 0 && infix[i - 1] == '('))) {
-                if (karakterPertama and i + 1 < infix.size() and infix[i + 1] == '(') {
-                    token.push_back("-1");
-                    token.push_back("*");
-                } else if (karakterPertama) {
-                    pengumpulString << karakter;
-                    karakterPertama = false;
-                } else {
-                    token.push_back("-1");
-                    token.push_back("*");
-                }
+            postfix << ' ';
+            expectUnary = false;
+        } else if (infix[i] == '(') {
+            operators.push('(');
+            expectUnary = true;
+        } else if (infix[i] == ')') {
+            while (!operators.empty() && operators.top() != '(') {
+                postfix << operators.top() << ' ';
+                operators.pop();
+            }
+            operators.pop(); 
+            expectUnary = false;
+        } else if (Operator(infix[i])) {
+            if (expectUnary && infix[i] == '-') {
+                postfix << "-1 ";
+                operators.push('*');
             } else {
-                token.push_back(string(1, karakter));
+                while (!operators.empty() && Precedence(operators.top()) >= Precedence(infix[i])) {
+                    postfix << operators.top() << ' ';
+                    operators.pop();
+                }
+                operators.push(infix[i]);
             }
-            sebelumnyaOperator = (karakter != ')');
-            karakterPertama = false;
-        } else if (karakter == ' ') {
-            if (pengumpulString.str().length() > 0) {
-                token.push_back(pengumpulString.str());
-                pengumpulString.str("");
-            }
+            expectUnary = true;
         }
     }
-    if (pengumpulString.str().length() > 0) {
-        token.push_back(pengumpulString.str());
+
+    while (!operators.empty()) {
+        postfix << operators.top() << ' ';
+        operators.pop();
     }
-    return token;
+
+    return postfix.str();
 }
 
-vector<string> infixToPostfix(const vector<string> &infixTokens) {
-    vector<string> postfix;
-    stack<string> ops;
+int evaluatePostfix(const string& postfix) {
+    stack<int> operands;
+    stringstream ss(postfix);
+    string token;
 
-    for (const auto& token : infixTokens) {
-        if (isdigit(token[0]) || (token.size() > 1 && token[0] == '-' && isdigit(token[1]))) {
-            postfix.push_back(token);
-        } else if (token == "(") {
-            ops.push(token);
-        } else if (token == ")") {
-            while (!ops.empty() && ops.top() != "(") {
-                postfix.push_back(ops.top());
-                ops.pop();
-            }
-            ops.pop();
+    while (ss >> token) {
+        if (isdigit(token[0]) || (token.size() > 1 && isdigit(token[1]))) {
+            operands.push(stoi(token));
         } else {
-            while (!ops.empty() && Precedence(ops.top()[0]) >= Precedence(token[0])) {
-                postfix.push_back(ops.top());
-                ops.pop();
-            }
-            ops.push(token);
+            int right = operands.top();
+            operands.pop();
+            int left = operands.top();
+            operands.pop();
+
+            if (token == "+") operands.push(left + right);
+            else if (token == "-") operands.push(left - right);
+            else if (token == "*") operands.push(left * right);
+            else if (token == "/") operands.push(left / right);
+            else if (token == "%") operands.push(left % right);
         }
     }
 
-    while (!ops.empty()) {
-        postfix.push_back(ops.top());
-        ops.pop();
-    }
-
-    return postfix;
-}
-
-void cetakToken(const vector<string> &token) {
-    for (size_t i = 0; i < token.size(); ++i) {
-        if (i > 0) {
-            cout << " ";
-        }
-        cout << token[i];
-    }
-    cout << "\n";
+    return operands.top();
 }
 
 int main() {
     string infix;
     getline(cin, infix);
 
-    vector<string> token = tokenize(infix);
-    vector<string> postfix = infixToPostfix(token);
-  
-    cetakToken(token);
+    string postfix = infixToPostfix(infix);
+    int result = evaluatePostfix(postfix);
+    cout << result << endl;
 
-    return 0;
+ return 0;
 }
-
