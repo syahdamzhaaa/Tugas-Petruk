@@ -69,6 +69,38 @@ vector<string> tokenize(const string &infix) {
     return token;
 }
 
+vector<string> infixToPostfix(const vector<string> &infixTokens) {
+    vector<string> postfix;
+    stack<string> ops;
+
+    for (const auto& token : infixTokens) {
+        if (isdigit(token[0]) || (token.size() > 1 && token[0] == '-' && isdigit(token[1]))) {
+            postfix.push_back(token);
+        } else if (token == "(") {
+            ops.push(token);
+        } else if (token == ")") {
+            while (!ops.empty() && ops.top() != "(") {
+                postfix.push_back(ops.top());
+                ops.pop();
+            }
+            ops.pop();
+        } else {
+            while (!ops.empty() && Precedence(ops.top()[0]) >= Precedence(token[0])) {
+                postfix.push_back(ops.top());
+                ops.pop();
+            }
+            ops.push(token);
+        }
+    }
+
+    while (!ops.empty()) {
+        postfix.push_back(ops.top());
+        ops.pop();
+    }
+
+    return postfix;
+}
+
 void cetakToken(const vector<string> &token) {
     for (size_t i = 0; i < token.size(); ++i) {
         if (i > 0) {
@@ -84,6 +116,7 @@ int main() {
     getline(cin, infix);
 
     vector<string> token = tokenize(infix);
+    vector<string> postfix = infixToPostfix(token);
   
     cetakToken(token);
 
